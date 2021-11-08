@@ -1,11 +1,12 @@
-cmake_minimum_required(VERSION 2.8.3)
+cmake_minimum_required(VERSION 3.0.2)
 cmake_policy(SET CMP0048 NEW)
 project(elastic_bridge)
 
+set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
+
 set (EFUSION_ROOT /opt)
 
-###################################
-###################################
 find_package(catkin REQUIRED COMPONENTS
   message_filters
   roscpp
@@ -45,14 +46,6 @@ generate_messages(
   DEPENDENCIES actionlib_msgs sensor_msgs std_msgs geometry_msgs  # Or other packages containing msgs
 )
 
-catkin_package(
-  CATKIN_DEPENDS actionlib_msgs sensor_msgs std_msgs geometry_msgs
-)
-
-set(CMAKE_CXX_STANDARD 11)
-
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
-
 if(NOT EXISTS "${EFUSION_ROOT}/ElasticFusion/Core")
   message(WARNING "elastic_bridge: ElasticFusion not found, package won't be built.")
   return()
@@ -63,9 +56,7 @@ set(EFUSION_INCLUDE_DIR "${EFUSION_ROOT}/ElasticFusion/Core/src")
 set(EFUSION_LIBRARY "${EFUSION_ROOT}/ElasticFusion/Core/build/libefusion.so")
 
 find_package(efusion REQUIRED)
-
 find_package(Pangolin REQUIRED CONFIG PATHS "${EFUSION_ROOT}/ElasticFusion/deps/Pangolin/build/src/")
-
 find_package(ZLIB REQUIRED)
 find_package(CUDA REQUIRED)
 
@@ -75,11 +66,12 @@ find_package(CUDA REQUIRED)
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES elastic_bridge
-  CATKIN_DEPENDS message_filters roscpp sensor_msgs std_msgs
+  CATKIN_DEPENDS message_filters roscpp sensor_msgs std_msgs actionlib_msgs geometry_msgs
 #  DEPENDS system_lib
 )
 
 include_directories(
+  include
   ${catkin_INCLUDE_DIRS}
   ${Boost_INCLUDE_DIRS}
   ${EFUSION_INCLUDE_DIRS}
@@ -89,15 +81,16 @@ include_directories(
   ${CUDA_INCLUDE_DIRS}
   ${GUI_INCLUDE_DIR}
 )
-#######
 
 link_directories(${Pangolin_LIBRARY_DIRS} ${EFUSION_LIBRARY_DIRS} ${OPENNI2_INCLUDE_DIRS})
 
-
-############################################ elastic node
+##################
+## elastic_node ##
+##################
 
 add_executable(elastic_node
   src/elastic_node.cpp
+  src/download_pc2_action.cpp
 )
 
 target_link_libraries(elastic_node
@@ -110,22 +103,24 @@ target_link_libraries(elastic_node
   ${PCL_IO_LIBRARIES}
 )
 
-add_dependencies(
-  elastic_node
+add_dependencies(elastic_node
   ${elastic_bridge_EXPORTED_TARGETS}
 )
-############################################ action client
 
+##############
+## save_pcl ##
+##############
 
-add_executable(save_pcl src/save_pcl.cpp)
-target_link_libraries(
-  save_pcl 
+add_executable(save_pcl 
+    src/save_pcl.cpp
+)
+
+target_link_libraries(save_pcl 
   ${catkin_LIBRARIES}
   ${PCL_COMMON_LIBRARIES} 
   ${PCL_IO_LIBRARIES}
 )
-add_dependencies(
-  save_pcl
+
+add_dependencies(save_pcl
   ${elastic_bridge_EXPORTED_TARGETS}
 )
-
