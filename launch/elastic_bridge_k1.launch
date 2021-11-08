@@ -9,7 +9,9 @@
     <param name="TOPIC_IMAGE_COLOR" type="string" value="/camera/color/image_raw" />
     <param name="TOPIC_IMAGE_DEPTH" type="string" value="/camera/depth/image_rect_raw" />
     <param name="TOPIC_CAMERA_INFO" type="string" value="/camera/color/camera_info" />
-    <param name="PERIODIC_WORLD_PUBLICATION" type="int" value="90" />
+    <param name="PERIODIC_WORLD_PUBLICATION" type="int" value="10" />
+    <param name="WORLD_FRAME" type="string" value="first_frame" />
+    <param name="CAMERA_FRAME" type="string" value="camera_depth_optical_frame" />
   </node>
 
 </launch>
