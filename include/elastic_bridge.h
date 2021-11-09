@@ -77,7 +77,7 @@ private:
     bool m_poseFromTFFirst = false;
     Eigen::Matrix4f first_pose;
     
-    ElasticFusion * m_eFusion = NULL;
+    ElasticFusion* m_eFusion = NULL;
 
     boost::mutex m_mutex;
     boost::condition_variable m_cond_var;
@@ -114,25 +114,25 @@ private:
     uint64 m_guid_counter;
 
 public:
-    ElasticBridge (ros::NodeHandle & nh);
+    ElasticBridge (ros::NodeHandle& nh);
     ~ElasticBridge ();
 
-    void sendTF (const Eigen::Matrix4f & pose, std::string from, std::string to);
+    void sendTF (const Eigen::Matrix4f& pose, std::string from, std::string to);
     Eigen::Matrix4f readTF ();
 
-    void publishFrameState (const std::vector<uint16> & depth_data, const std::vector<uint8> & rgb_data,
-                            pangolin::GlTexture * guid_texture,
-                            pangolin::GlTexture * image_texture, pangolin::GlTexture * vertex_texture,
-                            pangolin::GlTexture * normal_texture,const Eigen::Affine3f & pose,
-                            const std::vector<uint32> & disposed_luids,
-                            ros::Publisher & pub);
+    void publishFrameState (const std::vector<uint16>& depth_data, const std::vector<uint8>& rgb_data,
+                            pangolin::GlTexture* guid_texture,
+                            pangolin::GlTexture* image_texture, pangolin::GlTexture* vertex_texture,
+                            pangolin::GlTexture* normal_texture,const Eigen::Affine3f& pose,
+                            const std::vector<uint32>& disposed_luids,
+                            ros::Publisher& pub);
 
-    void imagePublish (const Eigen::Matrix4f & currPose,
-                       const std::vector<uint16> & depth_data,const std::vector<uint8> & rgb_data);
+    void imagePublish (const Eigen::Matrix4f& currPose,
+                       const std::vector<uint16>& depth_data,const std::vector<uint8>& rgb_data);
     
-    sensor_msgs::PointCloud2ConstPtr requestDownload (Uint64Vector & guids,Uint32Vector & luids);
+    sensor_msgs::PointCloud2ConstPtr requestDownload (Uint64Vector& guids, Uint32Vector& luids);
 
-    sensor_msgs::PointCloud2ConstPtr getPC2 (Uint64Vector * guids = NULL,Uint32Vector * luids = NULL);
+    sensor_msgs::PointCloud2ConstPtr getPC2 (Uint64Vector* guids = NULL, Uint32Vector* luids = NULL);
 
     void publishWorldExec ();
 

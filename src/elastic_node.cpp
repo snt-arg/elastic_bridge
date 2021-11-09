@@ -13,7 +13,7 @@
  * @brief Constructor for ElasticBridge instance.
  * @param nh ROS node handle.
  */
-ElasticBridge::ElasticBridge (ros::NodeHandle & nh) : m_nh(nh)
+ElasticBridge::ElasticBridge (ros::NodeHandle& nh) : m_nh(nh)
 {
     init();
 }
@@ -33,13 +33,13 @@ ElasticBridge::~ElasticBridge ()
  * @param from Parent coordinate frame.
  * @param to Child coordinate frame.
  */
-void ElasticBridge::sendTF (const Eigen::Matrix4f & pose, std::string from, std::string to)
+void ElasticBridge::sendTF (const Eigen::Matrix4f& pose, std::string from, std::string to)
 {
     tf::Transform transform;
     Eigen::Affine3d affine;
     affine.matrix() = pose.cast<double>();
     tf::transformEigenToTF(affine, transform);
-    const ros::Time & time = ros::Time::now();
+    const ros::Time& time = ros::Time::now();
     m_transformBroadcaster.sendTransform(tf::StampedTransform(transform, time, from, to));
 }
 
@@ -59,7 +59,7 @@ Eigen::Matrix4f ElasticBridge::readTF ()
         pose = affine.matrix().cast<float>();
 
     }
-    catch (tf::TransformException &ex)
+    catch (tf::TransformException& ex)
     {
         ROS_ERROR("elastic_bridge: could not read input TF: %s", ex.what());
     }
@@ -78,15 +78,15 @@ Eigen::Matrix4f ElasticBridge::readTF ()
  * @param disposed_luids Destroyed luids in this frame.
  * @param pub ROS publisher that the FrameState message is published on.
  */
-void ElasticBridge::publishFrameState (const std::vector<uint16> & depth_data,
-                                       const std::vector<uint8> & rgb_data,
-                                       pangolin::GlTexture * guid_texture,
-                                       pangolin::GlTexture * image_texture,
-                                       pangolin::GlTexture * vertex_texture,
-                                       pangolin::GlTexture * normal_texture,
-                                       const Eigen::Affine3f & pose,
-                                       const std::vector<uint32> & disposed_luids,
-                                       ros::Publisher & pub)
+void ElasticBridge::publishFrameState (const std::vector<uint16>& depth_data,
+                                       const std::vector<uint8>& rgb_data,
+                                       pangolin::GlTexture* guid_texture,
+                                       pangolin::GlTexture* image_texture,
+                                       pangolin::GlTexture* vertex_texture,
+                                       pangolin::GlTexture* normal_texture,
+                                       const Eigen::Affine3f& pose,
+                                       const std::vector<uint32>& disposed_luids,
+                                       ros::Publisher& pub)
 {
     if (pub.getNumSubscribers() == 0)
         return;
@@ -128,6 +128,7 @@ void ElasticBridge::publishFrameState (const std::vector<uint16> & depth_data,
     state.normal.resize(size * 3);
     state.radius.resize(size);
     state.luid_removed = disposed_luids;
+
     for (uint64 i = 0; i < size; i++)
     {
         state.input_color[i * 3 + 2] = rgb_data[i * 3 + 0];
@@ -160,7 +161,7 @@ void ElasticBridge::publishFrameState (const std::vector<uint16> & depth_data,
     }
     state.max_luid = m_guid_assoc.size();
     
-    tf::poseEigenToMsg(pose.cast<double>(),state.pose);
+    tf::poseEigenToMsg(pose.cast<double>(), state.pose);
     
     pub.publish(state);
 }
@@ -171,9 +172,9 @@ void ElasticBridge::publishFrameState (const std::vector<uint16> & depth_data,
  * @param depth_data Depth data per pixel for the frame stored in a 1D array of length frame height * width.
  * @param rgb_data Color data per pixel for the frame stored in a 1D array of length frame height * width.
  */
-void ElasticBridge::imagePublish (const Eigen::Matrix4f & currPose,
-                                  const std::vector<uint16> & depth_data,
-                                  const std::vector<uint8> & rgb_data)
+void ElasticBridge::imagePublish (const Eigen::Matrix4f& currPose,
+                                  const std::vector<uint16>& depth_data,
+                                  const std::vector<uint8>& rgb_data)
 {
     const int n_pixel = m_height * m_width;
 
@@ -207,7 +208,6 @@ void ElasticBridge::imagePublish (const Eigen::Matrix4f & currPose,
 
     // scope only
     {
-
         const uint32 TEXTURE_PIXEL_SIZE = 4;
         const uint32 OUTPUT_PIXEL_SIZE = 4;
 
@@ -275,7 +275,7 @@ void ElasticBridge::imagePublish (const Eigen::Matrix4f & currPose,
  * @param guids Vector of guids.
  * @param luids Vector of luids.
  */
-sensor_msgs::PointCloud2ConstPtr ElasticBridge::requestDownload (Uint64Vector & guids,Uint32Vector & luids)
+sensor_msgs::PointCloud2ConstPtr ElasticBridge::requestDownload (Uint64Vector& guids, Uint32Vector& luids)
 {
     boost::mutex::scoped_lock lock(m_mutex);
 
@@ -315,7 +315,7 @@ sensor_msgs::PointCloud2ConstPtr ElasticBridge::requestDownload (Uint64Vector & 
  * @param guids Vector of guids.
  * @param luids Vector of luids.
  */
-sensor_msgs::PointCloud2ConstPtr ElasticBridge::getPC2 (Uint64Vector * guids,Uint32Vector * luids)
+sensor_msgs::PointCloud2ConstPtr ElasticBridge::getPC2 (Uint64Vector* guids, Uint32Vector* luids)
 {
     Eigen::Vector4f * mapData = m_eFusion->getGlobalModel().downloadMap();
 
@@ -394,7 +394,7 @@ sensor_msgs::PointCloud2ConstPtr ElasticBridge::getPC2 (Uint64Vector * guids,Uin
     ROS_INFO("elastic_bridge: sending %d points.", int(count));
 
     sensor_msgs::PointCloud2Ptr pointCloud2ptr(new sensor_msgs::PointCloud2);
-    sensor_msgs::PointCloud2 & pointCloud2 = *pointCloud2ptr;
+    sensor_msgs::PointCloud2& pointCloud2 = *pointCloud2ptr;
     pcl::toROSMsg(pcl_cloud, pointCloud2);
     pointCloud2.header.stamp = ros::Time::now();
     pointCloud2.header.frame_id = m_world_frame;
@@ -478,7 +478,8 @@ void ElasticBridge::cameraInfoCallback (const sensor_msgs::CameraInfoPtr& msg)
  * @param imageColor Frame color message data.
  * @param imageDepth Frame depth message data. TODO: also doesn't get called by its owner function
  */
-void ElasticBridge::ImagesCallbackWorker (const sensor_msgs::ImageConstPtr& imageColor, const sensor_msgs::ImageConstPtr& imageDepth)
+void ElasticBridge::ImagesCallbackWorker (const sensor_msgs::ImageConstPtr& imageColor,
+                                          const sensor_msgs::ImageConstPtr& imageDepth)
 {
     if ((m_cameraInfoOK) && (m_started))
     {

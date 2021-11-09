@@ -14,7 +14,7 @@
  * @param eb_ ElasticBridge pointer.
  * @param ROS node handle.
  */
-DownloadPC2_Action::DownloadPC2_Action (const std::string name, ElasticBridge * eb_, ros::NodeHandle & nh) :
+DownloadPC2_Action::DownloadPC2_Action (const std::string name, ElasticBridge* eb_, ros::NodeHandle& nh) :
     m_nh(nh),
     m_as(m_nh, name, boost::bind(&DownloadPC2_Action::executeCB, this, _1), false)
 {
@@ -26,7 +26,7 @@ DownloadPC2_Action::DownloadPC2_Action (const std::string name, ElasticBridge * 
  * @brief Callback for Action Server.
  * @param goal Action data.
  */
-void DownloadPC2_Action::executeCB (const elastic_bridge::downloadPointcloud2GoalConstPtr &goal)
+void DownloadPC2_Action::executeCB (const elastic_bridge::downloadPointcloud2GoalConstPtr& goal)
 {
     if (goal->stop)
     {
