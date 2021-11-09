@@ -1,3 +1,11 @@
+/*
+ * Updates made by Anja Sheppard, Fall 2021.
+ *
+ * Copyright (c) 2017-2019, Andrea Pagani, Riccardo Monica
+ *   RIMLab, Department of Information Engineering, University of Parma, Italy
+ *   http://www.rimlab.ce.unipr.it/
+ */
+
 #pragma once
 
 #include <init_fake_opengl_context/fake_opengl_context.h>
@@ -41,6 +49,8 @@
 #include <pcl/kdtree/kdtree_flann.h>
 #include <pcl_conversions/pcl_conversions.h>
 
+
+//! @brief ElasticBridge is a class for running a ROS package version of ElasticFusion.
 class ElasticBridge {
 public:
     typedef uint32_t uint32;

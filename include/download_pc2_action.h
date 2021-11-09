@@ -1,3 +1,11 @@
+/*
+ * Updates made by Anja Sheppard, Fall 2021.
+ *
+ * Copyright (c) 2017-2019, Andrea Pagani, Riccardo Monica
+ *   RIMLab, Department of Information Engineering, University of Parma, Italy
+ *   http://www.rimlab.ce.unipr.it/
+ */
+
 #pragma once
 
 #include <ros/ros.h>

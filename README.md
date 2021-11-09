@@ -1,7 +1,11 @@
-Elastic Bridge
-==============
+Elastic Bridge for ROS Noetic
+=============================
 
-The `elastic_bridge` package integrates ElasticFusion by mp3guy into ROS (Robot Operating System) for Ubuntu 20.04.
+The original `elastic_bridge` package by mp3guy is now outdated. This update makes the package compatible for ROS Noetic and Ubuntu 20.04.
+
+----
+
+The `elastic_bridge` package integrates ElasticFusion by mp3guy into ROS (Robot Operating System).
 
 <https://github.com/mp3guy/ElasticFusion>
 
@@ -82,8 +86,8 @@ The surfel-based 3D reconstruction can be downloaded as a point cloud of `pcl::P
 - `TOPIC_FRAME_STATE` (string): at each frame, a message of type `msg/FrameState.msg` is published, which contains additional information for each pixel of the predicted view, such as position, normal, etc. (default: `/elastic_frame_state_stable`)
 - `TF_POSE_ALWAYS` (bool): if true, sensor pose is read from TF (default: `false`)
 - `TF_POSE_FIRST` (bool): if true, the sensor pose is read from TF only for the first sensor frame (default: `false`)
-- `TF_INPUT_WORLD_FRAME` (string): set TF reference frame for external sensor pose tracking (default: `/world`)
-- `TF_INPUT_CAMERA_FRAME` (string): set TF camera frame for external sensor pose tracking (default: `/robot`)
+- `TF_INPUT_WORLD_FRAME` (string): set TF reference frame for external sensor pose tracking (default: `world`)
+- `TF_INPUT_CAMERA_FRAME` (string): set TF camera frame for external sensor pose tracking (default: `robot`)
 - `TOPIC_SCAN_READY` (string): topic to un-suspend the node (default: `/elastic_scan_start`)
 - `TOPIC_SCAN_FINISH` (string): topic to suspend again the node (default: `/elastic_scan_end`)
 - `SAVE_PCL_ACTION` (string): action name to retrieve the surfel cloud (default: `/save_pcl`)
@@ -106,4 +110,4 @@ GUIDs and LUIDs are also returned by the `save_pcl` action, one for each surfel 
 
 ### Acknowledgments
 
-The original `elastic_bridge` package was written by Andrea Pagani during his bachelor thesis in Computer, Electronics and Telecommunication Engineering at University of Parma, Italy, in 2017-2018. The updates were made by Anja Sheppard in 2021 to make it run on ROS Melodic/Ubuntu 20.04.
+The original `elastic_bridge` package was written by Andrea Pagani during his bachelor thesis in Computer, Electronics and Telecommunication Engineering at University of Parma, Italy, in 2017-2018. The updates were made by Anja Sheppard in 2021 to make it run on ROS Noetic/Ubuntu 20.04.

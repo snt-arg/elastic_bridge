@@ -1,47 +1,38 @@
 /*
+ * Updates made by Anja Sheppard, Fall 2021.
+ *
  * Copyright (c) 2017-2019, Andrea Pagani, Riccardo Monica
  *   RIMLab, Department of Information Engineering, University of Parma, Italy
  *   http://www.rimlab.ce.unipr.it/
- *
- * All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without modification, are permitted
- * provided that the following conditions are met:
- *
- * 1. Redistributions of source code must retain the above copyright notice, this list of conditions
- * and the following disclaimer.
- *
- * 2. Redistributions in binary form must reproduce the above copyright notice, this list of
- * conditions and the following disclaimer in the documentation and/or other materials provided with
- * the distribution.
- *
- * 3. Neither the name of the copyright holder nor the names of its contributors may be used to
- * endorse or promote products derived from this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR
- * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND
- * FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
- * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
- * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
- * IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
- * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "download_pc2_action.h"
 #include "elastic_bridge.h"
 
+/**
+ * @brief Constructor for ElasticBridge instance.
+ * @param nh ROS node handle.
+ */
 ElasticBridge::ElasticBridge (ros::NodeHandle & nh) : m_nh(nh)
 {
     init();
 }
 
+/**
+ * @brief Destructor for ElasticBridge instance.
+ */
 ElasticBridge::~ElasticBridge ()
 {
     if (m_eFusion)
         delete m_eFusion;
 }
 
+/**
+ * @brief Broadcast transform between two frames to ROS.
+ * @param pose Transform between the two frames.
+ * @param from Parent coordinate frame.
+ * @param to Child coordinate frame.
+ */
 void ElasticBridge::sendTF (const Eigen::Matrix4f & pose, std::string from, std::string to)
 {
     tf::Transform transform;
@@ -52,6 +43,10 @@ void ElasticBridge::sendTF (const Eigen::Matrix4f & pose, std::string from, std:
     m_transformBroadcaster.sendTransform(tf::StampedTransform(transform, time, from, to));
 }
 
+/**
+ * @brief Look up transform between the input world frame and the input camera frame.
+ * TODO: this does not seem like good modular design
+ */
 Eigen::Matrix4f ElasticBridge::readTF ()
 {
     tf::StampedTransform transform;
@@ -71,12 +66,27 @@ Eigen::Matrix4f ElasticBridge::readTF ()
     return pose;
 }
 
-void ElasticBridge::publishFrameState (const std::vector<uint16> & depth_data, const std::vector<uint8> & rgb_data,
-                        pangolin::GlTexture * guid_texture,
-                        pangolin::GlTexture * image_texture, pangolin::GlTexture * vertex_texture,
-                        pangolin::GlTexture * normal_texture,const Eigen::Affine3f & pose,
-                        const std::vector<uint32> & disposed_luids,
-                        ros::Publisher & pub)
+/**
+ * @brief Populate FrameState message and publish.
+ * @param depth_data Depth data per pixel for the frame stored in a 1D array of length frame height * width.
+ * @param rgb_data Color data per pixel for the frame stored in a 1D array of length frame height * width.
+ * @param guid_texture Texture object for GUID extension.
+ * @param image_texture Image texture.
+ * @param vertex_texture Vertex texture.
+ * @param normal_texture Normal texture.
+ * @param pose Current sensor pose.
+ * @param disposed_luids Destroyed luids in this frame.
+ * @param pub ROS publisher that the FrameState message is published on.
+ */
+void ElasticBridge::publishFrameState (const std::vector<uint16> & depth_data,
+                                       const std::vector<uint8> & rgb_data,
+                                       pangolin::GlTexture * guid_texture,
+                                       pangolin::GlTexture * image_texture,
+                                       pangolin::GlTexture * vertex_texture,
+                                       pangolin::GlTexture * normal_texture,
+                                       const Eigen::Affine3f & pose,
+                                       const std::vector<uint32> & disposed_luids,
+                                       ros::Publisher & pub)
 {
     if (pub.getNumSubscribers() == 0)
         return;
@@ -155,8 +165,15 @@ void ElasticBridge::publishFrameState (const std::vector<uint16> & depth_data, c
     pub.publish(state);
 }
 
+/**
+ * @brief Populate/publish image (frame) and call function to publish FrameState.
+ * @param currPose Current sensor pose.
+ * @param depth_data Depth data per pixel for the frame stored in a 1D array of length frame height * width.
+ * @param rgb_data Color data per pixel for the frame stored in a 1D array of length frame height * width.
+ */
 void ElasticBridge::imagePublish (const Eigen::Matrix4f & currPose,
-                   const std::vector<uint16> & depth_data,const std::vector<uint8> & rgb_data)
+                                  const std::vector<uint16> & depth_data,
+                                  const std::vector<uint8> & rgb_data)
 {
     const int n_pixel = m_height * m_width;
 
@@ -253,6 +270,11 @@ void ElasticBridge::imagePublish (const Eigen::Matrix4f & currPose,
     }
 }
 
+/**
+ * @brief Send request for point cloud download.
+ * @param guids Vector of guids.
+ * @param luids Vector of luids.
+ */
 sensor_msgs::PointCloud2ConstPtr ElasticBridge::requestDownload (Uint64Vector & guids,Uint32Vector & luids)
 {
     boost::mutex::scoped_lock lock(m_mutex);
@@ -288,6 +310,11 @@ sensor_msgs::PointCloud2ConstPtr ElasticBridge::requestDownload (Uint64Vector & 
     return point2;
 }
 
+/**
+ * @brief Retrieve point cloud data from ElasticFusion and populate PointCloud2 message.
+ * @param guids Vector of guids.
+ * @param luids Vector of luids.
+ */
 sensor_msgs::PointCloud2ConstPtr ElasticBridge::getPC2 (Uint64Vector * guids,Uint32Vector * luids)
 {
     Eigen::Vector4f * mapData = m_eFusion->getGlobalModel().downloadMap();
@@ -375,12 +402,19 @@ sensor_msgs::PointCloud2ConstPtr ElasticBridge::getPC2 (Uint64Vector * guids,Uin
     return pointCloud2ptr;
 }
 
+/**
+ * @brief Publish PointCloud2 message.
+ */
 void ElasticBridge::publishWorldExec ()
 {
     sensor_msgs::PointCloud2ConstPtr pointCloud2 = this->getPC2();
     m_periodic_cloud_pub.publish(pointCloud2);
 }
 
+/**
+ * @brief Callback for TOPIC_SCAN_READY topic, which is used to un-suspend the node.
+ * @param msg Message received from topic. 
+ */
 void ElasticBridge::scanReadyCallback (const std_msgs::EmptyConstPtr& msg)
 {
     ROS_INFO("elastic_bridge: started.");
@@ -388,6 +422,10 @@ void ElasticBridge::scanReadyCallback (const std_msgs::EmptyConstPtr& msg)
     m_started = true;
 }
 
+/**
+ * @brief Callback for TOPIC_SCAN_FINISH topic, which is used to suspend the node.
+ * @param msg Message received from the topic.
+ */
 void ElasticBridge::scanFinishCallback (const std_msgs::EmptyConstPtr& msg)
 {
     ROS_INFO("elastic_bridge: stopped.");
@@ -395,6 +433,10 @@ void ElasticBridge::scanFinishCallback (const std_msgs::EmptyConstPtr& msg)
     m_started = false;
 }
 
+/**
+ * @brief Receive camera info and initialize ElasticFusion.
+ * @param msg TODO: not actually linked to the camerainfoCallback?? 
+ */
 void ElasticBridge::cameraInfoCallbackWorker (const sensor_msgs::CameraInfoConstPtr& msg)
 {
     if (m_cameraInfoOK)
@@ -420,6 +462,10 @@ void ElasticBridge::cameraInfoCallbackWorker (const sensor_msgs::CameraInfoConst
     m_cameraInfoOK = true;
 }
 
+/**
+ * @brief Callback for TOPIC_CAMERA_INFO that captures camera info data.
+ * @param msg Message received from the topic.
+ */
 void ElasticBridge::cameraInfoCallback (const sensor_msgs::CameraInfoPtr& msg)
 {
     boost::mutex::scoped_lock lock(m_mutex);
@@ -427,6 +473,11 @@ void ElasticBridge::cameraInfoCallback (const sensor_msgs::CameraInfoPtr& msg)
     m_cond_var.notify_all();
 }
 
+/**
+ * @brief Image(frame) publish helper function.
+ * @param imageColor Frame color message data.
+ * @param imageDepth Frame depth message data. TODO: also doesn't get called by its owner function
+ */
 void ElasticBridge::ImagesCallbackWorker (const sensor_msgs::ImageConstPtr& imageColor, const sensor_msgs::ImageConstPtr& imageDepth)
 {
     if ((m_cameraInfoOK) && (m_started))
@@ -530,6 +581,11 @@ void ElasticBridge::ImagesCallbackWorker (const sensor_msgs::ImageConstPtr& imag
     }
 }
 
+/**
+ * @brief Callback function for images received from the sensor.
+ * @param imageColor Frame color message data.
+ * @param imageDepth Frame depth message data.
+ */
 void ElasticBridge::ImagesCallback (const sensor_msgs::ImageConstPtr& imageColor, const sensor_msgs::ImageConstPtr& imageDepth)
 {
     boost::mutex::scoped_lock lock(m_mutex);
@@ -538,6 +594,16 @@ void ElasticBridge::ImagesCallback (const sensor_msgs::ImageConstPtr& imageColor
     m_cond_var.notify_all();
 }
 
+/**
+ * @brief Initialize ElasticFusion object for interacting with the ElasticFusion library.
+ * @param Height Frame height from the sensor.
+ * @param Width Frame width from the sensor.
+ * @param fx Focal length x
+ * @param fy Focal length y
+ * @param cx Camera principal point x
+ * @param cy Camera principal point y
+ *
+ */
 void ElasticBridge::InitElasticFusion (int Height, int Width, float fx, float fy, float cx, float cy)
 {
     ROS_INFO("elastic_bridge: Initializing Elastic Fusion...");
@@ -559,6 +625,9 @@ void ElasticBridge::InitElasticFusion (int Height, int Width, float fx, float fy
     ROS_INFO("elastic_bridge: Elastic Fusion initialized.");
 }
 
+/**
+ * @brief Baseline run loop.
+ */
 void ElasticBridge::run ()
 {
     boost::mutex::scoped_lock lock(m_mutex);
@@ -590,6 +659,9 @@ void ElasticBridge::run ()
     m_cond_var.notify_all(); // upon exiting, wake up everyone
 }
 
+/**
+ * @brief Initializes elastic bridge from ROS parameters.
+ */
 void ElasticBridge::init ()
 {
     boost::mutex::scoped_lock lock(m_mutex);
@@ -638,6 +710,7 @@ void ElasticBridge::init ()
     m_sync_sub = ATSynchronizerPtr(new ATSynchronizer(ATSyncPolicy(10), *m_imageColor_sub, *m_imageDepth_sub));
     m_sync_sub->registerCallback(boost::bind(&ElasticBridge::ImagesCallback, this, _1, _2));
 }
+
 
 int main (int argc, char **argv)
 {
