@@ -127,7 +127,7 @@ public:
                             const std::vector<uint32>& disposed_luids,
                             ros::Publisher& pub);
 
-    void imagePublish (const Eigen::Matrix4f& currPose,
+    void imagePublish (const Eigen::Matrix4f& curr_pose,
                        const std::vector<uint16>& depth_data,const std::vector<uint8>& rgb_data);
     
     sensor_msgs::PointCloud2ConstPtr requestDownload (Uint64Vector& guids, Uint32Vector& luids);
@@ -142,11 +142,11 @@ public:
     void cameraInfoCallbackWorker (const sensor_msgs::CameraInfoConstPtr& msg);
     void cameraInfoCallback (const sensor_msgs::CameraInfoPtr& msg);
 
-    void ImagesCallbackWorker (const sensor_msgs::ImageConstPtr& imageColor,
-                               const sensor_msgs::ImageConstPtr& imageDepth);
-    void ImagesCallback (const sensor_msgs::ImageConstPtr& imageColor, const sensor_msgs::ImageConstPtr& imageDepth);
+    void imagesCallbackWorker (const sensor_msgs::ImageConstPtr& image_color,
+                               const sensor_msgs::ImageConstPtr& image_depth);
+    void imagesCallback (const sensor_msgs::ImageConstPtr& image_color, const sensor_msgs::ImageConstPtr& image_depth);
 
-    void InitElasticFusion (int Height, int Width, float fx, float fy, float cx, float cy);
+    void initElasticFusion (int height, int width, float fx, float fy, float cx, float cy);
 
     void run ();
     void init ();

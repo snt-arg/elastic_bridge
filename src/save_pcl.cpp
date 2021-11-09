@@ -18,7 +18,7 @@
 //Pcl
 #include <pcl_conversions/pcl_conversions.h>
 
-int main(int argc, char** argv) {
+int main (int argc, char** argv) {
 
     ros::init(argc, argv, "save_pcl_client");
 
