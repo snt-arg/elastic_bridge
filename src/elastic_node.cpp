@@ -40,12 +40,11 @@ void ElasticBridge::sendTF (const Eigen::Matrix4f& pose, std::string from, std::
     affine.matrix() = pose.cast<double>();
     tf::transformEigenToTF(affine, transform);
     const ros::Time& time = ros::Time::now();
-    m_transformBroadcaster.sendTransform(tf::StampedTransform(transform, time, from, to));
+    m_transform_broadcaster.sendTransform(tf::StampedTransform(transform, time, from, to));
 }
 
 /**
  * @brief Look up transform between the input world frame and the input camera frame.
- * TODO: this does not seem like good modular design
  */
 Eigen::Matrix4f ElasticBridge::readTF ()
 {
@@ -53,7 +52,7 @@ Eigen::Matrix4f ElasticBridge::readTF ()
     Eigen::Matrix4f pose = Eigen::Matrix4f::Identity();
     try
     {
-        m_transformListener.lookupTransform(m_input_camera_frame, m_input_world_frame, ros::Time(0), transform);
+        m_transform_listener.lookupTransform(m_input_camera_frame, m_input_world_frame, ros::Time(0), transform);
         Eigen::Affine3d affine;
         tf::transformTFToEigen(transform, affine);
         pose = affine.matrix().cast<float>();
@@ -78,22 +77,22 @@ Eigen::Matrix4f ElasticBridge::readTF ()
  * @param disposed_luids Destroyed luids in this frame.
  * @param pub ROS publisher that the FrameState message is published on.
  */
-void ElasticBridge::publishFrameState (const std::vector<uint16>& depth_data,
-                                       const std::vector<uint8>& rgb_data,
+void ElasticBridge::publishFrameState (const std::vector<uint16_t>& depth_data,
+                                       const std::vector<uint8_t>& rgb_data,
                                        pangolin::GlTexture* guid_texture,
                                        pangolin::GlTexture* image_texture,
                                        pangolin::GlTexture* vertex_texture,
                                        pangolin::GlTexture* normal_texture,
                                        const Eigen::Affine3f& pose,
-                                       const std::vector<uint32>& disposed_luids,
+                                       const std::vector<uint32_t>& disposed_luids,
                                        ros::Publisher& pub)
 {
     if (pub.getNumSubscribers() == 0)
         return;
     
-    const uint64 size = m_width * m_height;
+    const uint64_t size = m_width * m_height;
     
-    std::vector<uint32> guid_vec(size, 127);
+    std::vector<uint32_t> guid_vec(size, 127);
 #ifdef ELASTIC_BRIDGE_EXTENSION_GUID
     guid_texture->Download(guid_vec.data(), GL_LUMINANCE_INTEGER_EXT, GL_UNSIGNED_INT);
 #endif
@@ -129,7 +128,7 @@ void ElasticBridge::publishFrameState (const std::vector<uint16>& depth_data,
     state.radius.resize(size);
     state.luid_removed = disposed_luids;
 
-    for (uint64 i = 0; i < size; i++)
+    for (uint64_t i = 0; i < size; i++)
     {
         state.input_color[i * 3 + 2] = rgb_data[i * 3 + 0];
         state.input_color[i * 3 + 1] = rgb_data[i * 3 + 1];
@@ -152,9 +151,9 @@ void ElasticBridge::publishFrameState (const std::vector<uint16>& depth_data,
         
         state.depth[i] = vertex_vec[i * 4 + 2];
 #ifdef ELASTIC_BRIDGE_EXTENSION_GUID
-        const uint32 luid = guid_vec[i];
+        const uint32_t luid = guid_vec[i];
 #else
-        const uint32 luid = 0;
+        const uint32_t luid = 0;
 #endif
         state.luid[i] = luid;
         state.guid[i] = luid ? m_guid_assoc[luid - 1] : 0;
@@ -166,15 +165,9 @@ void ElasticBridge::publishFrameState (const std::vector<uint16>& depth_data,
     pub.publish(state);
 }
 
-/**
- * @brief Populate/publish image (frame) and call function to publish FrameState.
- * @param curr_pose Current sensor pose.
- * @param depth_data Depth data per pixel for the frame stored in a 1D array of length frame height * width.
- * @param rgb_data Color data per pixel for the frame stored in a 1D array of length frame height * width.
- */
-void ElasticBridge::imagePublish (const Eigen::Matrix4f& curr_pose,
-                                  const std::vector<uint16>& depth_data,
-                                  const std::vector<uint8>& rgb_data)
+void ElasticBridge::publishFrame (const Eigen::Matrix4f& curr_pose,
+                   const std::vector<uint16_t>& depth_data,
+                   const std::vector<uint8_t>& rgb_data)
 {
     const int n_pixel = m_height * m_width;
 
@@ -193,7 +186,7 @@ void ElasticBridge::imagePublish (const Eigen::Matrix4f& curr_pose,
     std::vector<float> image_vec(n_pixel * 4, 127);
     image_texture->Download(image_vec.data(), GL_BGRA, GL_FLOAT);
 
-    std::vector<uint32> guid_vec(n_pixel, 127);
+    std::vector<uint32_t> guid_vec(n_pixel, 127);
 #ifdef ELASTIC_BRIDGE_EXTENSION_GUID
     guid_texture->Download(guid_vec.data(), GL_LUMINANCE_INTEGER_EXT, GL_UNSIGNED_INT);
 #endif
@@ -206,68 +199,70 @@ void ElasticBridge::imagePublish (const Eigen::Matrix4f& curr_pose,
     const std::vector<GLuint> disposed_guids;
 #endif
 
-    // scope only
+    imagePublish(n_pixel, image_vec);
+
+    for (uint64_t i = 0; i < guid_vec.size(); i++)
     {
-        const uint32 TEXTURE_PIXEL_SIZE = 4;
-        const uint32 OUTPUT_PIXEL_SIZE = 4;
+        const uint32_t internal_guid = guid_vec[i];
+        if (!internal_guid)
+            continue;
 
-        sensor_msgs::Image image_msg;
-        image_msg.height = m_height;
-        image_msg.width = m_width;
-        image_msg.encoding = "rgba8";
-        image_msg.is_bigendian = false;
-        image_msg.step = image_msg.width * OUTPUT_PIXEL_SIZE;
-        image_msg.data.resize(n_pixel * OUTPUT_PIXEL_SIZE);
-        for (int y = 0; y < m_height; y++)
-        {
-              for (int x = 0; x < m_width; x++)
-              {
-                  const int i = y * m_width + x;
+        if (internal_guid > m_guid_assoc.size())
+            m_guid_assoc.resize(internal_guid,0);
 
-                  image_msg.data[i * OUTPUT_PIXEL_SIZE + 0] = image_vec[i * TEXTURE_PIXEL_SIZE + 0] * 255;
-                  image_msg.data[i * OUTPUT_PIXEL_SIZE + 1] = image_vec[i * TEXTURE_PIXEL_SIZE + 1] * 255;
-                  image_msg.data[i * OUTPUT_PIXEL_SIZE + 2] = image_vec[i * TEXTURE_PIXEL_SIZE + 2] * 255;
-                  image_msg.data[i * OUTPUT_PIXEL_SIZE + 3] = 255;
-              }
-        }
-
-      m_image_pub.publish(image_msg);
+        if (m_guid_assoc[internal_guid - 1] == 0)
+            m_guid_assoc[internal_guid - 1] = ++m_guid_counter;
     }
 
-    // scope only
+    for (uint64_t i = 0; i < disposed_guids.size(); i++)
     {
-        for (uint64 i = 0; i < guid_vec.size(); i++)
-        {
-            const uint32 internal_guid = guid_vec[i];
-            if (!internal_guid)
-                continue;
+        const uint32_t disposed_guid = disposed_guids[i];
+        if (!disposed_guid)
+            continue;
 
-            if (internal_guid > m_guid_assoc.size())
-                m_guid_assoc.resize(internal_guid,0);
+        if (disposed_guid > m_guid_assoc.size())
+            continue;
 
-            if (m_guid_assoc[internal_guid - 1] == 0)
-                m_guid_assoc[internal_guid - 1] = ++m_guid_counter;
-        }
-
-        for (uint64 i = 0; i < disposed_guids.size(); i++)
-        {
-            const uint32 disposed_guid = disposed_guids[i];
-            if (!disposed_guid)
-                continue;
-
-            if (disposed_guid > m_guid_assoc.size())
-                continue;
-
-            m_guid_assoc[disposed_guid - 1] = 0;
-        }
-
-        Eigen::Affine3f pose;
-        pose.matrix() = curr_pose;
-
-        publishFrameState(depth_data, rgb_data,
-                          guid_texture, image_texture, vertex_texture, normal_texture,
-                          pose,disposed_guids, m_frame_state_stable_pub);
+        m_guid_assoc[disposed_guid - 1] = 0;
     }
+
+    Eigen::Affine3f pose;
+    pose.matrix() = curr_pose;
+
+    publishFrameState(depth_data, rgb_data, guid_texture, image_texture, vertex_texture, normal_texture,
+                      pose, disposed_guids, m_frame_state_stable_pub);
+}
+
+/**
+ * @brief Populate/publish image (frame) and call function to publish FrameState.
+ * @param curr_pose Current sensor pose.
+ * @param depth_data Depth data per pixel for the frame stored in a 1D array of length frame height * width.
+ * @param rgb_data Color data per pixel for the frame stored in a 1D array of length frame height * width.
+ */
+void ElasticBridge::imagePublish (const int n_pixel, std::vector<float>& image_vec)
+{
+    sensor_msgs::Image image_msg;
+    image_msg.height = m_height;
+    image_msg.width = m_width;
+    image_msg.encoding = "rgba8";
+    image_msg.is_bigendian = false;
+    image_msg.step = image_msg.width * OUTPUT_PIXEL_SIZE;
+    image_msg.data.resize(n_pixel * OUTPUT_PIXEL_SIZE);
+    
+    for (int y = 0; y < m_height; y++)
+    {
+          for (int x = 0; x < m_width; x++)
+          {
+              const int i = y * m_width + x;
+
+              image_msg.data[i * OUTPUT_PIXEL_SIZE + 0] = image_vec[i * TEXTURE_PIXEL_SIZE + 0] * 255;
+              image_msg.data[i * OUTPUT_PIXEL_SIZE + 1] = image_vec[i * TEXTURE_PIXEL_SIZE + 1] * 255;
+              image_msg.data[i * OUTPUT_PIXEL_SIZE + 2] = image_vec[i * TEXTURE_PIXEL_SIZE + 2] * 255;
+              image_msg.data[i * OUTPUT_PIXEL_SIZE + 3] = 255;
+          }
+    }
+    
+    m_image_pub.publish(image_msg);
 }
 
 /**
@@ -275,7 +270,7 @@ void ElasticBridge::imagePublish (const Eigen::Matrix4f& curr_pose,
  * @param guids Vector of guids.
  * @param luids Vector of luids.
  */
-sensor_msgs::PointCloud2ConstPtr ElasticBridge::requestDownload (Uint64Vector& guids, Uint32Vector& luids)
+sensor_msgs::PointCloud2ConstPtr ElasticBridge::requestDownload (std::vector<uint64_t>& guids, std::vector<uint32_t>& luids)
 {
     boost::mutex::scoped_lock lock(m_mutex);
 
@@ -289,7 +284,7 @@ sensor_msgs::PointCloud2ConstPtr ElasticBridge::requestDownload (Uint64Vector& g
     m_cond_var.notify_all();
 
     if (ros::isShuttingDown())
-      return m_point2;
+      return m_point_cloud_for_download;
 
     // wait until this request is satisfied
     while (!m_download_ready && !ros::isShuttingDown())
@@ -299,12 +294,12 @@ sensor_msgs::PointCloud2ConstPtr ElasticBridge::requestDownload (Uint64Vector& g
 
     m_download_ready = false;
     m_download_request = false;
-    sensor_msgs::PointCloud2ConstPtr point2 = m_point2;
+    sensor_msgs::PointCloud2ConstPtr point2 = m_point_cloud_for_download;
     guids.swap(m_guids);
     luids.swap(m_luids);
     m_guids.clear();
     m_luids.clear();
-    m_point2.reset();
+    m_point_cloud_for_download.reset();
     m_cond_var.notify_all();
 
     return point2;
@@ -315,11 +310,11 @@ sensor_msgs::PointCloud2ConstPtr ElasticBridge::requestDownload (Uint64Vector& g
  * @param guids Vector of guids.
  * @param luids Vector of luids.
  */
-sensor_msgs::PointCloud2ConstPtr ElasticBridge::getPC2 (Uint64Vector* guids, Uint32Vector* luids)
+sensor_msgs::PointCloud2ConstPtr ElasticBridge::getPC2 (std::vector<uint64_t>* guids, std::vector<uint32_t>* luids)
 {
     Eigen::Vector4f* map_data = m_eFusion->getGlobalModel().downloadMap();
 
-    const uint64 last_count = m_eFusion->getGlobalModel().lastCount();
+    const uint64_t last_count = m_eFusion->getGlobalModel().lastCount();
 
     pcl::PointCloud<pcl::PointSurfel> pcl_cloud;
     pcl_cloud.is_dense = true;
@@ -377,8 +372,8 @@ sensor_msgs::PointCloud2ConstPtr ElasticBridge::getPC2 (Uint64Vector* guids, Uin
 
         pcl_cloud.points.push_back(point_surfel);
 
-        const uint32 internal_guid = col[1];
-        const uint64 guid = !internal_guid ? 0 : m_guid_assoc[internal_guid - 1];
+        const uint32_t internal_guid = col[1];
+        const uint64_t guid = !internal_guid ? 0 : m_guid_assoc[internal_guid - 1];
         if (guids)
             guids->push_back(guid);
         if (luids)
@@ -419,7 +414,7 @@ void ElasticBridge::scanReadyCallback (const std_msgs::EmptyConstPtr& msg)
 {
     ROS_INFO("elastic_bridge: started.");
     boost::mutex::scoped_lock lock(m_mutex);
-    m_started = true;
+    m_running = true;
 }
 
 /**
@@ -430,16 +425,15 @@ void ElasticBridge::scanFinishCallback (const std_msgs::EmptyConstPtr& msg)
 {
     ROS_INFO("elastic_bridge: stopped.");
     boost::mutex::scoped_lock lock(m_mutex);
-    m_started = false;
+    m_running = false;
 }
 
 /**
  * @brief Receive camera info and initialize ElasticFusion.
- * @param msg TODO: not actually linked to the camerainfoCallback?? 
  */
 void ElasticBridge::cameraInfoCallbackWorker (const sensor_msgs::CameraInfoConstPtr& msg)
 {
-    if (m_cameraInfoOK)
+    if (m_camera_info_received)
       return; // already initialized
 
     ROS_INFO("elastic_bridge: first camera info received.");
@@ -457,9 +451,9 @@ void ElasticBridge::cameraInfoCallbackWorker (const sensor_msgs::CameraInfoConst
     m_center_x = cx;
     m_center_y = cy;
 
-    cameraInfo_sub.shutdown();
+    m_camera_info_sub.shutdown();
     initElasticFusion(m_height, m_width, fx, fy, cx, cy);
-    m_cameraInfoOK = true;
+    m_camera_info_received = true;
 }
 
 /**
@@ -476,12 +470,12 @@ void ElasticBridge::cameraInfoCallback (const sensor_msgs::CameraInfoPtr& msg)
 /**
  * @brief Image(frame) publish helper function.
  * @param imageColor Frame color message data.
- * @param imageDepth Frame depth message data. TODO: also doesn't get called by its owner function
+ * @param imageDepth Frame depth message data.
  */
 void ElasticBridge::imagesCallbackWorker (const sensor_msgs::ImageConstPtr& image_color,
                                           const sensor_msgs::ImageConstPtr& image_depth)
 {
-    if ((m_cameraInfoOK) && (m_started))
+    if ((m_camera_info_received) && (m_running))
     {
         //ROS_INFO("elastic_bridge: received frame %d", int(m_frame_count));
 
@@ -494,8 +488,8 @@ void ElasticBridge::imagesCallbackWorker (const sensor_msgs::ImageConstPtr& imag
         int n_pixel = m_height * m_width;
 
         int64_t time = header_stamp.toNSec();
-        std::vector<uint16> depth_data(n_pixel);
-        std::vector<uint8> rgb_data(n_pixel * 3);
+        std::vector<uint16_t> depth_data(n_pixel);
+        std::vector<uint8_t> rgb_data(n_pixel * 3);
 
         // Depth data decoding
         for (int r = 0; r < n_pixel; r++)
@@ -505,7 +499,7 @@ void ElasticBridge::imagesCallbackWorker (const sensor_msgs::ImageConstPtr& imag
                 float f;
                 std::memcpy(&f, &(image_depth->data[4 * r]), sizeof (f));
                 if (std::isfinite(f))
-                  depth_data[r] = uint16(f * 1000);
+                  depth_data[r] = uint16_t(f * 1000);
                 else
                   depth_data[r] = 0;
             }
@@ -553,7 +547,7 @@ void ElasticBridge::imagesCallbackWorker (const sensor_msgs::ImageConstPtr& imag
         }
 
         Eigen::Matrix4f curr_pose;
-        if (m_poseFromTFFirst || m_poseFromTFAlways)
+        if (m_pose_from_tf_first || m_pose_from_tf_always)
         {
             Eigen::Matrix4f pose = readTF();
             m_eFusion->processFrame(rgb_data.data(), depth_data.data(), time, &pose);
@@ -565,7 +559,7 @@ void ElasticBridge::imagesCallbackWorker (const sensor_msgs::ImageConstPtr& imag
             curr_pose = m_eFusion->getCurrPose();
         }
 
-        imagePublish(curr_pose, depth_data, rgb_data);
+        publishFrame(curr_pose, depth_data, rgb_data);
 
         sendTF(curr_pose, m_world_frame, m_camera_frame);
         
@@ -607,7 +601,7 @@ void ElasticBridge::imagesCallback (const sensor_msgs::ImageConstPtr& image_colo
  * @param cy Camera principal point y
  *
  */
-void ElasticBridge::initElasticFusion (int height, int width, float fx, float fy, float cx, float cy)
+void ElasticBridge::initElasticFusion (unsigned int height, unsigned int width, float fx, float fy, float cx, float cy)
 {
     ROS_INFO("elastic_bridge: Initializing Elastic Fusion...");
     ROS_INFO("elastic_bridge: w %d, h %d, fx %f, fy %f, cx %f, cy %f",
@@ -620,7 +614,7 @@ void ElasticBridge::initElasticFusion (int height, int width, float fx, float fy
 
     m_guid_counter = 0;
 
-    m_eFusion = new ElasticFusion(200, 35000, 5e-05, 1e-05, !m_poseFromTFAlways);
+    m_eFusion = new ElasticFusion(200, 35000, 5e-05, 1e-05, !m_pose_from_tf_always);
 
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
@@ -629,14 +623,15 @@ void ElasticBridge::initElasticFusion (int height, int width, float fx, float fy
 }
 
 /**
- * @brief Baseline run loop.
+ * @brief Baseline run loop. Frame color and depth messages are populated in the callback function and then
+ *        checked here. If the message has been populated, then the relative callback worker is called.
  */
 void ElasticBridge::run ()
 {
     boost::mutex::scoped_lock lock(m_mutex);
     while (!ros::isShuttingDown())
     {
-        m_cond_var.wait_for(lock, boost::chrono::duration<uint64, boost::milli>(100));
+        m_cond_var.wait_for(lock, boost::chrono::duration<uint64_t, boost::milli>(100));
 
         if (m_image_color && m_image_depth)
         {
@@ -653,7 +648,7 @@ void ElasticBridge::run ()
 
         if (m_download_request)
         {
-            m_point2 = this->getPC2(&m_guids,&m_luids);
+            m_point_cloud_for_download = this->getPC2(&m_guids, &m_luids);
             m_download_ready = true;
             m_cond_var.notify_all();
         }
@@ -672,13 +667,13 @@ void ElasticBridge::init ()
     int tmp_param_val = 0;
     std::string tmp_param_str;
 
-    m_nh.param<std::string>("TOPIC_IMAGE_COLOR", m_TopicImageColor, "/camera/rgb/image_rect_color");
-    m_nh.param<std::string>("TOPIC_IMAGE_DEPTH", m_TopicImageDepth, "/camera/depth_registered/sw_registered/image_rect");
-    m_nh.param<std::string>("TOPIC_CAMERA_INFO", m_TopicCameraInfo, "/camera/rgb/camera_info");
+    m_nh.param<std::string>("TOPIC_IMAGE_COLOR", m_topic_image_color, "/camera/rgb/image_rect_color");
+    m_nh.param<std::string>("TOPIC_IMAGE_DEPTH", m_topic_image_depth, "/camera/depth_registered/sw_registered/image_rect");
+    m_nh.param<std::string>("TOPIC_CAMERA_INFO", m_topic_camera_info, "/camera/rgb/camera_info");
     m_nh.param<std::string>("WORLD_FRAME", m_world_frame, "first_frame");
     m_nh.param<std::string>("CAMERA_FRAME", m_camera_frame, "camera_frame");
 
-    m_nh.param<bool>("AUTOSTART", m_started, false);
+    m_nh.param<bool>("AUTOSTART", m_running, false);
     m_nh.param<std::string>("DISPLAY_NAME", m_display_name, ""); // empty for auto-detect current
                                                                  // set to Xorg display name otherwise (e.g. ":0")
 
@@ -695,20 +690,20 @@ void ElasticBridge::init ()
     m_nh.param<std::string>("TOPIC_CURRENT_VIEW", tmp_param_str, "/elastic_current_view");
     m_image_pub = m_nh.advertise<sensor_msgs::Image>(tmp_param_str, 1);
 
-    cameraInfo_sub = m_nh.subscribe(m_TopicCameraInfo, 1, &ElasticBridge::cameraInfoCallback, this);
+    m_camera_info_sub = m_nh.subscribe(m_topic_camera_info, 1, &ElasticBridge::cameraInfoCallback, this);
 
-    m_nh.param<bool>("TF_POSE_ALWAYS", m_poseFromTFAlways, false);
-    m_nh.param<bool>("TF_POSE_FIRST", m_poseFromTFFirst, false);
+    m_nh.param<bool>("TF_POSE_ALWAYS", m_pose_from_tf_always, false);
+    m_nh.param<bool>("TF_POSE_FIRST", m_pose_from_tf_first, false);
     m_nh.param<std::string>("TF_INPUT_WORLD_FRAME", m_input_world_frame, "world");
     m_nh.param<std::string>("TF_INPUT_CAMERA_FRAME", m_input_camera_frame, "robot");
 
     m_nh.param<std::string>("TOPIC_SCAN_READY", tmp_param_str, "/elastic_scan_start");
-    scanReady_sub = m_nh.subscribe(tmp_param_str, 1, &ElasticBridge::scanReadyCallback, this);
+    m_nh.subscribe(tmp_param_str, 1, &ElasticBridge::scanReadyCallback, this);
     m_nh.param<std::string>("TOPIC_SCAN_FINISH", tmp_param_str, "/elastic_scan_end");
-    scanFinish_sub = m_nh.subscribe(tmp_param_str, 1, &ElasticBridge::scanFinishCallback, this);
+    m_nh.subscribe(tmp_param_str, 1, &ElasticBridge::scanFinishCallback, this);
 
-    m_imageColor_sub = ImageFilterSubscriberPtr(new ImageFilterSubscriber(m_nh, m_TopicImageColor, 1));
-    m_imageDepth_sub = ImageFilterSubscriberPtr(new ImageFilterSubscriber(m_nh, m_TopicImageDepth, 1));
+    m_imageColor_sub = ImageFilterSubscriberPtr(new ImageFilterSubscriber(m_nh, m_topic_image_color, 1));
+    m_imageDepth_sub = ImageFilterSubscriberPtr(new ImageFilterSubscriber(m_nh, m_topic_image_depth, 1));
 
     m_sync_sub = ATSynchronizerPtr(new ATSynchronizer(ATSyncPolicy(10), *m_imageColor_sub, *m_imageDepth_sub));
     m_sync_sub->registerCallback(boost::bind(&ElasticBridge::imagesCallback, this, _1, _2));

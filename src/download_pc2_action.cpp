@@ -11,7 +11,7 @@
 /**
  * @brief DownloadPC2_Action Constructor.
  * @param name ROS Action Server name.
- * @param eb_ ElasticBridge pointer.
+ * @param eb ElasticBridge pointer.
  * @param ROS node handle.
  */
 DownloadPC2_Action::DownloadPC2_Action (const std::string name, ElasticBridge* eb, ros::NodeHandle& nh) :
@@ -30,12 +30,12 @@ void DownloadPC2_Action::executeCB (const elastic_bridge::downloadPointcloud2Goa
 {
     if (goal->stop)
     {
-        eb->scanFinishCallback(std_msgs::EmptyConstPtr(new std_msgs::Empty()));
+        m_eb->scanFinishCallback(std_msgs::EmptyConstPtr(new std_msgs::Empty()));
     }
 
     elastic_bridge::downloadPointcloud2Result result;
 
-    sensor_msgs::PointCloud2ConstPtr point_cloud2 = eb->requestDownload(result.guids, result.luids);
+    sensor_msgs::PointCloud2ConstPtr point_cloud2 = m_eb->requestDownload(result.guids, result.luids);
     if (!point_cloud2)
     {
       m_as.setAborted();
