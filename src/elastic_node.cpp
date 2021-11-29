@@ -249,9 +249,9 @@ void ElasticBridge::imagePublish (const int n_pixel, std::vector<float>& image_v
     image_msg.step = image_msg.width * OUTPUT_PIXEL_SIZE;
     image_msg.data.resize(n_pixel * OUTPUT_PIXEL_SIZE);
     
-    for (int y = 0; y < m_height; y++)
+    for (unsigned int y = 0; y < m_height; y++)
     {
-          for (int x = 0; x < m_width; x++)
+          for (unsigned int x = 0; x < m_width; x++)
           {
               const int i = y * m_width + x;
 
@@ -595,6 +595,33 @@ void ElasticBridge::imagesCallback (const sensor_msgs::ImageConstPtr& image_colo
 }
 
 /**
+ * @brief Callback function for suspend service. Pauses elastic fusion when "true" is sent. Unpauses when "false".
+ * @param req Request containing true or false.
+ * @param res Response detailing whether suspended or not.
+ */
+bool ElasticBridge::suspend (elastic_bridge::Suspend::Request &req, elastic_bridge::Suspend::Response &res)
+{
+    if (req.suspend == true) // pause node
+    {
+        ROS_INFO("elastic_bridge: stopped.");
+        boost::mutex::scoped_lock lock(m_mutex);
+        m_running = false;
+
+        res.suspended = true;
+    }
+    else // un-pause node
+    {
+        ROS_INFO("elastic_bridge: started.");
+        boost::mutex::scoped_lock lock(m_mutex);
+        m_running = true;
+
+        res.suspended = false;
+    }
+
+    return true;
+}
+
+/**
  * @brief Initialize ElasticFusion object for interacting with the ElasticFusion library.
  * @param height Frame height from the sensor.
  * @param width Frame width from the sensor.
@@ -720,6 +747,9 @@ int main (int argc, char **argv)
     ros::NodeHandle nh("~");
 
     ElasticBridge eb(nh);
+
+    // Service setup
+    ros::ServiceServer server = nh.advertiseService("suspend", &ElasticBridge::suspend, &eb);
 
     std::string param_string;
     nh.param<std::string>("SAVE_PCL_ACTION", param_string, "/save_pcl");

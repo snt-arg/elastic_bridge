@@ -43,6 +43,7 @@
 #include <pcl/kdtree/kdtree_flann.h>
 #include <pcl_conversions/pcl_conversions.h>
 
+#include <elastic_bridge/Suspend.h>
 
 //! @brief ElasticBridge is a class for running a ROS package version of ElasticFusion.
 class ElasticBridge
@@ -151,6 +152,8 @@ public:
     void imagesCallbackWorker (const sensor_msgs::ImageConstPtr& image_color,
                                const sensor_msgs::ImageConstPtr& image_depth);
     void imagesCallback (const sensor_msgs::ImageConstPtr& image_color, const sensor_msgs::ImageConstPtr& image_depth);
+
+    bool suspend (elastic_bridge::Suspend::Request &req, elastic_bridge::Suspend::Response &res);
 
     void initElasticFusion (unsigned int height, unsigned int width, float fx, float fy, float cx, float cy);
 

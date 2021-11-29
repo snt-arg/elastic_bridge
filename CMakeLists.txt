@@ -37,6 +37,11 @@ add_message_files(
   FILES FrameState.msg
 )
 
+add_service_files(
+  FILES
+  Suspend.srv
+)
+
 add_action_files(
   DIRECTORY action
   FILES downloadPointcloud2.action
@@ -64,7 +69,7 @@ find_package(CUDA REQUIRED)
 ## catkin specific configuration ##
 ###################################
 catkin_package(
-#  INCLUDE_DIRS include
+  INCLUDE_DIRS include
 #  LIBRARIES elastic_bridge
   CATKIN_DEPENDS message_filters roscpp sensor_msgs std_msgs actionlib_msgs geometry_msgs
 #  DEPENDS system_lib
@@ -104,6 +109,7 @@ target_link_libraries(elastic_node
 )
 
 add_dependencies(elastic_node
+  elastic_bridge_generate_messages_cpp
   ${elastic_bridge_EXPORTED_TARGETS}
 )
 
