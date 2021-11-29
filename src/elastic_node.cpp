@@ -451,7 +451,6 @@ void ElasticBridge::cameraInfoCallbackWorker (const sensor_msgs::CameraInfoConst
     m_center_x = cx;
     m_center_y = cy;
 
-    m_camera_info_sub.shutdown();
     initElasticFusion(m_height, m_width, fx, fy, cx, cy);
     m_camera_info_received = true;
 }
@@ -527,6 +526,10 @@ void ElasticBridge::imagesCallbackWorker (const sensor_msgs::ImageConstPtr& imag
             else if (color_encoding == "bgr8")
             {
                 std::memcpy(&(rgb_data[i * 3]), &(image_color->data[i * 3]), 3);
+            }
+            else if (color_encoding == "bgra8")
+            {
+                std::memcpy(&(rgb_data[i * 3]), &(image_color->data[i * 4]), 4);
             }
             else
             {
