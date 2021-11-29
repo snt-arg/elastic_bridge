@@ -143,9 +143,6 @@ public:
 
     void publishWorldExec ();
 
-    void scanReadyCallback (const std_msgs::EmptyConstPtr& msg);
-    void scanFinishCallback (const std_msgs::EmptyConstPtr& msg);
-
     void cameraInfoCallbackWorker (const sensor_msgs::CameraInfoConstPtr& msg);
     void cameraInfoCallback (const sensor_msgs::CameraInfoPtr& msg);
 

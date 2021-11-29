@@ -62,7 +62,11 @@ The main node is `elastic_node`.
 
 Set parameters `TOPIC_IMAGE_COLOR` to the color image topic, `TOPIC_IMAGE_DEPTH` to the depth image topic, and `TOPIC_CAMERA_INFO` to the camera info topic. The node waits for the first camera info before creating the ElasticFusion instance, as ElasticFusion cannot be initialized before image width and height are known.
 
-By default, the node starts in suspended state. Set `AUTOSTART` to `true` if the node should start 3D reconstruction immediately. Otherwise, the node can be un-suspended by sending a `std_msgs/Empty` message to `/elastic_scan_start`. The node can be suspended again by sending a `std_msgs/Empty` to `/elastic_scan_end`.
+By default, the node starts in suspended state. Set `AUTOSTART` to `true` if the node should start 3D reconstruction immediately.
+
+To suspend the node while it is running, send "true" to the `suspend` ROS service: `rosservice call /elastic_node/suspend true`
+
+To un-suspend the node while it is paused, send "false" to the `suspend` ROS service: `rosservice call /elastic_node/suspend false`
 
 During execution, the node publishes the current 3D reconstruction image in `/elastic_current_view`. Current sensor pose, as estimated by egomotion tracking, is published to TF frame `/camera_frame`, with reference `/first_frame`, corresponding to the first camera pose.
 
@@ -88,8 +92,6 @@ The surfel-based 3D reconstruction can be downloaded as a point cloud of `pcl::P
 - `TF_POSE_FIRST` (bool): if true, the sensor pose is read from TF only for the first sensor frame (default: `false`)
 - `TF_INPUT_WORLD_FRAME` (string): set TF reference frame for external sensor pose tracking (default: `world`)
 - `TF_INPUT_CAMERA_FRAME` (string): set TF camera frame for external sensor pose tracking (default: `robot`)
-- `TOPIC_SCAN_READY` (string): topic to un-suspend the node (default: `/elastic_scan_start`)
-- `TOPIC_SCAN_FINISH` (string): topic to suspend again the node (default: `/elastic_scan_end`)
 - `SAVE_PCL_ACTION` (string): action name to retrieve the surfel cloud (default: `/save_pcl`)
 
 ### GUID patch

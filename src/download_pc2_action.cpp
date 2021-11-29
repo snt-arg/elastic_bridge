@@ -30,7 +30,10 @@ void DownloadPC2_Action::executeCB (const elastic_bridge::downloadPointcloud2Goa
 {
     if (goal->stop)
     {
-        m_eb->scanFinishCallback(std_msgs::EmptyConstPtr(new std_msgs::Empty()));
+        ros::ServiceClient client = m_nh.serviceClient<elastic_bridge::Suspend>("suspend");
+        elastic_bridge::Suspend srv;
+        srv.request.suspend = true;
+        client.call(srv);
     }
 
     elastic_bridge::downloadPointcloud2Result result;

@@ -407,28 +407,6 @@ void ElasticBridge::publishWorldExec ()
 }
 
 /**
- * @brief Callback for TOPIC_SCAN_READY topic, which is used to un-suspend the node.
- * @param msg Message received from topic. 
- */
-void ElasticBridge::scanReadyCallback (const std_msgs::EmptyConstPtr& msg)
-{
-    ROS_INFO("elastic_bridge: started.");
-    boost::mutex::scoped_lock lock(m_mutex);
-    m_running = true;
-}
-
-/**
- * @brief Callback for TOPIC_SCAN_FINISH topic, which is used to suspend the node.
- * @param msg Message received from the topic.
- */
-void ElasticBridge::scanFinishCallback (const std_msgs::EmptyConstPtr& msg)
-{
-    ROS_INFO("elastic_bridge: stopped.");
-    boost::mutex::scoped_lock lock(m_mutex);
-    m_running = false;
-}
-
-/**
  * @brief Receive camera info and initialize ElasticFusion.
  */
 void ElasticBridge::cameraInfoCallbackWorker (const sensor_msgs::CameraInfoConstPtr& msg)
@@ -726,11 +704,6 @@ void ElasticBridge::init ()
     m_nh.param<bool>("TF_POSE_FIRST", m_pose_from_tf_first, false);
     m_nh.param<std::string>("TF_INPUT_WORLD_FRAME", m_input_world_frame, "world");
     m_nh.param<std::string>("TF_INPUT_CAMERA_FRAME", m_input_camera_frame, "robot");
-
-    m_nh.param<std::string>("TOPIC_SCAN_READY", tmp_param_str, "/elastic_scan_start");
-    m_nh.subscribe(tmp_param_str, 1, &ElasticBridge::scanReadyCallback, this);
-    m_nh.param<std::string>("TOPIC_SCAN_FINISH", tmp_param_str, "/elastic_scan_end");
-    m_nh.subscribe(tmp_param_str, 1, &ElasticBridge::scanFinishCallback, this);
 
     m_imageColor_sub = ImageFilterSubscriberPtr(new ImageFilterSubscriber(m_nh, m_topic_image_color, 1));
     m_imageDepth_sub = ImageFilterSubscriberPtr(new ImageFilterSubscriber(m_nh, m_topic_image_depth, 1));
