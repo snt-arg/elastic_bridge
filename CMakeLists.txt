@@ -21,6 +21,7 @@ find_package(catkin REQUIRED COMPONENTS
   message_generation
   geometry_msgs
   eigen_conversions
+  pcl_ros
   pcl_conversions
   init_fake_opengl_context
 )
