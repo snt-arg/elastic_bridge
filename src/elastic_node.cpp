@@ -52,7 +52,7 @@ Eigen::Matrix4f ElasticBridge::readTF ()
     Eigen::Matrix4f pose = Eigen::Matrix4f::Identity();
     try
     {
-        m_transform_listener.lookupTransform(m_input_camera_frame, m_input_world_frame, ros::Time(0), transform);
+        m_transform_listener.lookupTransform(m_input_world_frame, m_input_camera_frame, ros::Time(0), transform);
         Eigen::Affine3d affine;
         tf::transformTFToEigen(transform, affine);
         pose = affine.matrix().cast<float>();
