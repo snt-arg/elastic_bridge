@@ -1,0 +1,12 @@
+# the path to the directory where the results will be saved
+results_dir: "/home/saadejazz/"
+
+# the method used for the SLAM
+slam_method: "elasticfusion" 
+
+# the sequence number/name of the dataset
+dataset_seq: "seq01"
+
+# the relevant topics for the evaluation
+ros_topics:
+  camera_pose: "/elastic_camera_pose"

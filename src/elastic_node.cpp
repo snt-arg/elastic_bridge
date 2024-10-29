@@ -86,13 +86,11 @@ void ElasticBridge::publishFrameState (const std::vector<uint16_t>& depth_data,
                                        pangolin::GlTexture* normal_texture,
                                        const Eigen::Affine3f& pose,
                                        const std::vector<uint32_t>& disposed_luids,
-                                       ros::Publisher& pub)
+                                       ros::Publisher& posePub,
+                                       ros::Publisher& statePub,
+                                       const ros::Time& stamp)
 {
-    if (pub.getNumSubscribers() == 0)
-        return;
-    
     const uint64_t size = m_width * m_height;
-    
     std::vector<uint32_t> guid_vec(size, 127);
 #ifdef ELASTIC_BRIDGE_EXTENSION_GUID
     guid_texture->Download(guid_vec.data(), GL_LUMINANCE_INTEGER_EXT, GL_UNSIGNED_INT);
@@ -162,13 +160,21 @@ void ElasticBridge::publishFrameState (const std::vector<uint16_t>& depth_data,
     state.max_luid = m_guid_assoc.size();
     
     tf::poseEigenToMsg(pose.cast<double>(), state.pose);
-    
-    pub.publish(state);
+
+    // Publish the stamped Pose message
+    geometry_msgs::PoseStamped stamped_pose;
+    stamped_pose.header.stamp = stamp;
+    stamped_pose.header.frame_id = m_camera_frame;
+    stamped_pose.pose = state.pose;
+
+    posePub.publish(stamped_pose);
+    statePub.publish(state);
 }
 
-void ElasticBridge::publishFrame (const Eigen::Matrix4f& curr_pose,
-                   const std::vector<uint16_t>& depth_data,
-                   const std::vector<uint8_t>& rgb_data)
+void ElasticBridge::publishFrame(const Eigen::Matrix4f& curr_pose,
+                                 const std::vector<uint16_t>& depth_data,
+                                 const std::vector<uint8_t>& rgb_data,
+                                 const ros::Time& stamp)
 {
     const int n_pixel = m_height * m_width;
 
@@ -231,7 +237,7 @@ void ElasticBridge::publishFrame (const Eigen::Matrix4f& curr_pose,
     pose.matrix() = curr_pose;
 
     publishFrameState(depth_data, rgb_data, guid_texture, image_texture, vertex_texture, normal_texture,
-                      pose, disposed_guids, m_frame_state_stable_pub);
+                      pose, disposed_guids, m_camera_pose_pub, m_frame_state_stable_pub, stamp);
 }
 
 /**
@@ -542,7 +548,7 @@ void ElasticBridge::imagesCallbackWorker (const sensor_msgs::ImageConstPtr& imag
             curr_pose = m_eFusion->get_T_wc();
         }
         Eigen::Matrix4f curr_pose_matrix = curr_pose.matrix().cast<float>();
-        publishFrame(curr_pose_matrix, depth_data, rgb_data);
+        publishFrame(curr_pose_matrix, depth_data, rgb_data, header_stamp);
         sendTF(curr_pose_matrix, m_world_frame, m_camera_frame);
         
         if (m_periodic_world_publication)
@@ -698,16 +704,17 @@ void ElasticBridge::init ()
 
     m_nh.param<std::string>("TOPIC_CURRENT_VIEW", tmp_param_str, "/elastic_current_view");
     m_image_pub = m_nh.advertise<sensor_msgs::Image>(tmp_param_str, 1);
+    m_camera_pose_pub = m_nh.advertise<geometry_msgs::PoseStamped>("/elastic_camera_pose", 1);
 
-    m_camera_info_sub = m_nh.subscribe(m_topic_camera_info, 1, &ElasticBridge::cameraInfoCallback, this);
+    m_camera_info_sub = m_nh.subscribe(m_topic_camera_info, 20, &ElasticBridge::cameraInfoCallback, this);
 
     m_nh.param<bool>("TF_POSE_ALWAYS", m_pose_from_tf_always, false);
     m_nh.param<bool>("TF_POSE_FIRST", m_pose_from_tf_first, false);
     m_nh.param<std::string>("TF_INPUT_WORLD_FRAME", m_input_world_frame, "world");
     m_nh.param<std::string>("TF_INPUT_CAMERA_FRAME", m_input_camera_frame, "robot");
 
-    m_imageColor_sub = ImageFilterSubscriberPtr(new ImageFilterSubscriber(m_nh, m_topic_image_color, 1));
-    m_imageDepth_sub = ImageFilterSubscriberPtr(new ImageFilterSubscriber(m_nh, m_topic_image_depth, 1));
+    m_imageColor_sub = ImageFilterSubscriberPtr(new ImageFilterSubscriber(m_nh, m_topic_image_color, 500));
+    m_imageDepth_sub = ImageFilterSubscriberPtr(new ImageFilterSubscriber(m_nh, m_topic_image_depth, 500));
 
     m_sync_sub = ATSynchronizerPtr(new ATSynchronizer(ATSyncPolicy(10), *m_imageColor_sub, *m_imageDepth_sub));
     m_sync_sub->registerCallback(boost::bind(&ElasticBridge::imagesCallback, this, _1, _2));

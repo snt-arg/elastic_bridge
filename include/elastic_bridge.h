@@ -16,6 +16,7 @@
 #include <sensor_msgs/Image.h>
 #include <sensor_msgs/PointCloud2.h>
 #include <std_msgs/Empty.h>
+#include <geometry_msgs/PoseStamped.h>
 #include <message_filters/sync_policies/approximate_time.h>
 #include <message_filters/subscriber.h>
 #include <tf/transform_broadcaster.h>
@@ -62,7 +63,7 @@ private:
     ros::NodeHandle m_nh; //! @brief ROS node handle.
     ros::Subscriber m_camera_info_sub;
     ros::Publisher m_periodic_cloud_pub, m_image_pub;
-    ros::Publisher m_frame_state_stable_pub;
+    ros::Publisher m_frame_state_stable_pub, m_camera_pose_pub;
     tf::TransformBroadcaster m_transform_broadcaster;
     tf::TransformListener m_transform_listener;
     ImageFilterSubscriberPtr m_imageColor_sub, m_imageDepth_sub;
@@ -131,10 +132,11 @@ public:
                             pangolin::GlTexture* image_texture, pangolin::GlTexture* vertex_texture,
                             pangolin::GlTexture* normal_texture,const Eigen::Affine3f& pose,
                             const std::vector<uint32_t>& disposed_luids,
-                            ros::Publisher& pub);
+                            ros::Publisher& posePub, ros::Publisher& statePub, const ros::Time& stamp);
 
     void publishFrame (const Eigen::Matrix4f& curr_pose,
-                       const std::vector<uint16_t>& depth_data,const std::vector<uint8_t>& rgb_data);
+                       const std::vector<uint16_t>& depth_data,const std::vector<uint8_t>& rgb_data,
+                       const ros::Time& stamp);
     void imagePublish (const int n_pixel, std::vector<float>& image_vec);
     
     sensor_msgs::PointCloud2ConstPtr requestDownload (std::vector<uint64_t>& guids, std::vector<uint32_t>& luids);
