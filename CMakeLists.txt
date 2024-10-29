@@ -1,8 +1,8 @@
-cmake_minimum_required(VERSION 3.0.2)
+cmake_minimum_required(VERSION 3.16.1)
 cmake_policy(SET CMP0048 NEW)
 project(elastic_bridge)
 
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
 
 set (EFUSION_ROOT /opt)
@@ -58,11 +58,11 @@ if(NOT EXISTS "${EFUSION_ROOT}/ElasticFusion/Core")
 endif()
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_LIST_DIR}/cmake")
-set(EFUSION_INCLUDE_DIR "${EFUSION_ROOT}/ElasticFusion/Core/src")
-set(EFUSION_LIBRARY "${EFUSION_ROOT}/ElasticFusion/Core/build/libefusion.so")
+set(EFUSION_INCLUDE_DIR "${EFUSION_ROOT}/ElasticFusion/Core")
+set(EFUSION_LIBRARY "${EFUSION_ROOT}/ElasticFusion/build/Core/libefusion.so")
 
 find_package(efusion REQUIRED)
-find_package(Pangolin REQUIRED CONFIG PATHS "${EFUSION_ROOT}/ElasticFusion/deps/Pangolin/build/src/")
+find_package(Pangolin REQUIRED CONFIG PATHS "${EFUSION_ROOT}/ElasticFusion/third-party/Pangolin/build/src/")
 find_package(ZLIB REQUIRED)
 find_package(CUDA REQUIRED)
 
@@ -86,6 +86,9 @@ include_directories(
   ${EIGEN_INCLUDE_DIRS}
   ${CUDA_INCLUDE_DIRS}
   ${GUI_INCLUDE_DIR}
+  ${EFUSION_ROOT}/ElasticFusion/third-party/Sophus
+  ${EFUSION_ROOT}/ElasticFusion/third-party/Pangolin/include
+  ${EFUSION_ROOT}/ElasticFusion/third-party/Pangolin/build/src/include
 )
 
 link_directories(${Pangolin_LIBRARY_DIRS} ${EFUSION_LIBRARY_DIRS} ${OPENNI2_INCLUDE_DIRS})

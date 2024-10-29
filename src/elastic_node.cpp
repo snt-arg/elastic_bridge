@@ -8,6 +8,7 @@
 
 #include "download_pc2_action.h"
 #include "elastic_bridge.h"
+#include <sophus/se3.hpp>
 
 /**
  * @brief Constructor for ElasticBridge instance.
@@ -33,7 +34,7 @@ ElasticBridge::~ElasticBridge ()
  * @param from Parent coordinate frame.
  * @param to Child coordinate frame.
  */
-void ElasticBridge::sendTF (const Eigen::Matrix4f& pose, std::string from, std::string to)
+void ElasticBridge::sendTF(const Eigen::Matrix4f& pose, std::string from, std::string to)
 {
     tf::Transform transform;
     Eigen::Affine3d affine;
@@ -527,22 +528,22 @@ void ElasticBridge::imagesCallbackWorker (const sensor_msgs::ImageConstPtr& imag
             }
         }
 
-        Eigen::Matrix4f curr_pose;
+        Sophus::SE3d curr_pose;
         if (m_pose_from_tf_first || m_pose_from_tf_always)
         {
             Eigen::Matrix4f pose = readTF();
-            m_eFusion->processFrame(rgb_data.data(), depth_data.data(), time, &pose);
-            curr_pose = pose;
+            Sophus::SE3d pose_d = Sophus::SE3d(pose.cast<double>());
+            m_eFusion->processFrame(rgb_data.data(), depth_data.data(), time, 1, &pose_d);
+            curr_pose = pose_d;
         }
         else
         {
-            m_eFusion->processFrame(rgb_data.data(), depth_data.data(), time);
-            curr_pose = m_eFusion->getCurrPose();
+            m_eFusion->processFrame(rgb_data.data(), depth_data.data(), time, 1);
+            curr_pose = m_eFusion->get_T_wc();
         }
-
-        publishFrame(curr_pose, depth_data, rgb_data);
-
-        sendTF(curr_pose, m_world_frame, m_camera_frame);
+        Eigen::Matrix4f curr_pose_matrix = curr_pose.matrix().cast<float>();
+        publishFrame(curr_pose_matrix, depth_data, rgb_data);
+        sendTF(curr_pose_matrix, m_world_frame, m_camera_frame);
         
         if (m_periodic_world_publication)
         {
