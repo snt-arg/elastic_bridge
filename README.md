@@ -1,8 +1,14 @@
 Elastic Bridge for ROS Noetic
 =============================
 
-The original `elastic_bridge` package by mp3guy is now outdated. This update makes the package compatible for ROS Noetic and Ubuntu 20.04.
+This fork of the [repo](https://github.com/anja-sheppard/elastic_bridge) includes the following stuff on top of the original functionalities:  
+1. Dockerfile which should help specify dependencies and commit IDs. Note: Current Dockerfile is bulky and can be stripped down according to what is needed.
+2. Compatibility with the changes in the newer [version](https://github.com/mp3guy/ElasticFusion/tree/7fca730813c6ac8973cdddcc26c7538d2dee5074) of ElasticFusion, specifically with Sophus.
+3. Stamped pose publishing to `/elastic_camera_pose`, and recording script in `evaluation/generate_pose_txt_files.py` to record poses in TUM format for ATE evaluation.  
+4. Depth scale as a launch argument to account for non-standard depth scaling, as is present in the TUM RGB-D dataset. 
 
+
+The original README follows:  
 ----
 
 The `elastic_bridge` package integrates ElasticFusion by mp3guy into ROS (Robot Operating System).
