@@ -90,6 +90,7 @@ private:
     float m_focal_y; //! @brief Camera focal length y (mm).
     float m_center_x; //! @brief Camera principal point x (mm).
     float m_center_y; //! @brief Camera principal point x (mm).
+    float m_depth_scale; //! @brief Depth scale factor.
     bool m_camera_info_received = false; //! @brief True once camera calibration info has been received.
     const uint32_t TEXTURE_PIXEL_SIZE = 4;
     const uint32_t OUTPUT_PIXEL_SIZE = 4;

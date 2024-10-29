@@ -1,4 +1,8 @@
 <launch>
+
+  <!-- [NOTE] - Important to specify this, for example TUM dataset has a 5:1mm, so a scale of 5.0 -->
+  <arg name="elastic_depth_scale" default="1.0" />
+
   <param name="use_sim_time" value="true" />
   <node pkg="elastic_bridge" type="elastic_node" name="elastic_node" output="screen" >
     <param name="AUTOSTART" type="bool" value="true" />
@@ -8,6 +12,7 @@
     <param name="PERIODIC_WORLD_PUBLICATION" type="int" value="10" />
     <param name="WORLD_FRAME" type="string" value="first_frame" />
     <param name="CAMERA_FRAME" type="string" value="camera_depth_optical_frame" />
+    <param name="DEPTH_SCALE" type="double" value="$(arg elastic_depth_scale)" />
   </node>
 
 </launch>

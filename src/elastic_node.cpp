@@ -499,6 +499,7 @@ void ElasticBridge::imagesCallbackWorker (const sensor_msgs::ImageConstPtr& imag
                 ROS_ERROR("Unknown encoding: %s", encoding.c_str());
                 return;
             }
+            depth_data[r] /= m_depth_scale;
         }
 
         // Color data decoding
@@ -687,6 +688,9 @@ void ElasticBridge::init ()
     m_nh.param<std::string>("TOPIC_CAMERA_INFO", m_topic_camera_info, "/camera/rgb/camera_info");
     m_nh.param<std::string>("WORLD_FRAME", m_world_frame, "first_frame");
     m_nh.param<std::string>("CAMERA_FRAME", m_camera_frame, "camera_frame");
+
+    // the depth scale
+    m_nh.param<float>("DEPTH_SCALE", m_depth_scale, 1.0f);
 
     m_nh.param<bool>("AUTOSTART", m_running, false);
     m_nh.param<std::string>("DISPLAY_NAME", m_display_name, ""); // empty for auto-detect current
